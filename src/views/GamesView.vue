@@ -1,185 +1,219 @@
 <template>
-  <div class="min-h-screen bg-gray-100 p-8">
-    <div class="max-w-6xl mx-auto">
-      <!-- Encabezado -->
-      <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Mis Videojuegos</h1>
-        <button 
-          @click="handleLogout" 
-          class="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-md shadow-sm transition-colors"
-        >
-          Cerrar Sesión
-        </button>
-      </div>
-
-      <!-- Formulario para agregar un juego -->
-      <div class="bg-white p-6 rounded-xl shadow-sm mb-8">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Agregar Nuevo Juego</h2>
-        <form @submit.prevent="createGame" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-          <input 
-            v-model="newGame.title" 
-            type="text" 
-            placeholder="Título del juego" 
-            required
-            class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input 
-            v-model="newGame.boxArtUrl" 
-            type="url" 
-            placeholder="URL de la portada (http://...)" 
-            required
-            class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <label class="flex items-center space-x-2 cursor-pointer text-gray-700">
-            <input 
-              v-model="newGame.isFavorite" 
-              type="checkbox" 
-              class="rounded text-indigo-600 focus:ring-indigo-500 h-5 w-5 cursor-pointer"
-            />
-            <span class="font-medium">¿Es favorito?</span>
-          </label>
-          <button 
-            type="submit" 
-            :disabled="isCreating"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-md shadow-sm disabled:opacity-50 transition-colors"
-          >
-            {{ isCreating ? 'Guardando...' : 'Guardar Juego' }}
-          </button>
-        </form>
-      </div>
-
-      <!-- Estado vacío (sin juegos) -->
-      <div v-if="games.length === 0" class="bg-white p-12 rounded-xl shadow-sm text-center text-gray-500">
-        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-        <h3 class="text-lg font-medium text-gray-900">No hay videojuegos</h3>
-        <p class="mt-1">Comienza agregando tu primer juego en el formulario de arriba.</p>
-      </div>
-
-      <!-- Cuadrícula de juegos -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-         <div v-for="game in games" :key="game.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow relative group">
-           
-           <!-- Estrella de favorito interactiva -->
-           <button 
-             @click="toggleFavorite(game)"
-             class="absolute top-2 right-2 text-3xl drop-shadow-md z-10 focus:outline-none transform transition-transform hover:scale-110"
-             :class="game.isFavorite ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-200'"
-             title="Marcar/Desmarcar como favorito"
-           >
-             ★
-           </button>
-           
-           <!-- Imagen de portada -->
-           <img :src="game.boxArtUrl" :alt="game.title" class="w-full h-56 object-cover bg-gray-200" />
-           
-           <div class="p-4">
-             <h3 class="text-lg font-bold text-gray-900 truncate mb-4" :title="game.title">{{ game.title }}</h3>
-             
-             <!-- Botón de eliminar -->
-             <button 
-                @click="deleteGame(game.id)"
-                class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-1.5 rounded-md transition-colors text-sm border border-red-200"
-             >
-               Eliminar
-             </button>
-           </div>
-         </div>
+  <div class="h-screen bg-[#050505] flex flex-col p-4 md:p-6 overflow-hidden">
+    
+    <div class="flex justify-between items-center mb-4 shrink-0">
+      <h1 class="text-2xl md:text-3xl font-bold text-[#e0e0e0] drop-shadow-[0_0_5px_rgba(0,243,255,0.4)]">Catálogo</h1>
+      <div class="space-x-3 flex">
+        <Button variant="outline" @click="$router.push('/tierlist')" class="border-[#00f3ff] text-[#00f3ff] hover:bg-[#00f3ff] hover:text-black">Tier List</Button>
+        <Button variant="outline" @click="handleLogout" class="border-[#ff003c] text-[#ff003c] hover:bg-[#ff003c] hover:text-white">Salir</Button>
       </div>
     </div>
+
+    <Card class="bg-[#111] border-[#333] mb-4 shrink-0">
+      <CardContent class="p-3">
+        <form @submit.prevent="saveGame" class="flex flex-col md:flex-row gap-3 items-end md:items-center">
+          <Input v-model="formGame.title" placeholder="Título" required class="h-8 text-sm bg-[#0a0a0a] border-[#333] text-white focus-visible:ring-[#00f3ff]" />
+          <Input v-model="formGame.boxArtUrl" placeholder="URL de portada" class="h-8 text-sm bg-[#0a0a0a] border-[#333] text-white focus-visible:ring-[#00f3ff]" />
+          <div class="flex gap-3 w-full md:w-auto">
+            <Input v-model="formGame.category" placeholder="Categoría" class="h-8 text-sm w-full md:w-24 bg-[#0a0a0a] border-[#333] text-white focus-visible:ring-[#00f3ff]" />
+            <Input v-model.number="formGame.year" type="number" placeholder="Año" class="h-8 text-sm w-full md:w-20 bg-[#0a0a0a] border-[#333] text-white focus-visible:ring-[#00f3ff]" />
+          </div>
+          
+          <Button type="submit" :disabled="isSaving" class="h-8 text-xs font-bold w-full md:w-auto shrink-0" :class="isEditingMode ? 'bg-[#ffdd00] hover:bg-yellow-600 text-black' : 'bg-[#00f3ff] hover:bg-cyan-600 text-black'">
+            {{ isSaving ? '...' : (isEditingMode ? 'Actualizar' : 'Añadir') }}
+          </Button>
+          <Button v-if="isEditingMode" @click="cancelEdit" variant="ghost" class="h-8 text-xs text-gray-400">Cancelar</Button>
+          
+          <div class="hidden md:block w-[1px] h-6 bg-[#333] mx-2"></div>
+          
+          <Input v-model="searchQuery" placeholder="Buscar..." class="h-8 text-sm md:max-w-xs bg-[#0a0a0a] border-[#333] text-white focus-visible:ring-[#00f3ff]" />
+          
+          <Button type="button" variant="outline" @click="showOnlyFavorites = !showOnlyFavorites" class="h-8 text-xs font-bold w-full md:w-auto shrink-0 transition-colors" :class="showOnlyFavorites ? 'border-[#ffdd00] text-[#ffdd00] hover:bg-[#ffdd00] hover:text-black' : 'border-[#333] text-gray-400 hover:text-white'">
+            {{ showOnlyFavorites ? '★ Viendo Favoritos' : '☆ Mostrar Favoritos' }}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-4">
+         <GameCard v-for="game in paginatedGames" :key="game.id" :game="game" @delete-game="promptDeleteGame" @edit-game="loadEditGame" @toggle-favorite="toggleFavorite" />
+      </div>
+    </div>
+
+    <div v-if="totalPages > 1" class="flex justify-between items-center pt-4 border-t border-[#333] shrink-0 mt-2">
+      <span class="text-xs font-mono text-gray-500">Mostrando {{ paginatedGames.length }} registros en esta página</span>
+      <div class="flex space-x-4 items-center">
+        <Button variant="outline" @click="prevPage" :disabled="currentPage === 1" class="h-8 border-[#333] text-gray-400 hover:text-white hover:border-[#00f3ff]">&lt; Anterior</Button>
+        <span class="text-xs font-mono text-[#00f3ff]">Página {{ currentPage }} de {{ totalPages }}</span>
+        <Button variant="outline" @click="nextPage" :disabled="currentPage === totalPages" class="h-8 border-[#333] text-gray-400 hover:text-white hover:border-[#00f3ff]">Siguiente &gt;</Button>
+      </div>
+    </div>
+
+    <AlertDialog :open="!!gameToDelete" @update:open="(val) => { if(!val) gameToDelete = null }">
+      <AlertDialogContent class="bg-[#111] border-[#ff003c] text-white sm:max-w-md w-[90vw] rounded-lg">
+        <AlertDialogHeader>
+          <AlertDialogTitle class="text-[#ff003c]">¿Eliminar Juego?</AlertDialogTitle>
+          <AlertDialogDescription class="text-gray-400">Esta acción es irreversible. El juego se borrará permanentemente de tu catálogo.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter class="gap-2 sm:gap-0 mt-4">
+          <AlertDialogCancel class="bg-transparent border-[#333] text-gray-300 hover:bg-[#333] hover:text-white">Cancelar</AlertDialogCancel>
+          <Button @click="confirmDeleteGame" class="bg-[#ff003c] text-white hover:bg-red-700">Sí, eliminar</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { Card, CardContent } from '@/components/ui/card';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { toast } from 'vue-sonner';
+import localforage from 'localforage';
 import api from '../config/axios';
+import GameCard from '../components/GameCard.vue';
+import { useAppStore } from '../stores/appStore'; 
 
-const router = useRouter();
-const games = ref([]);
-const isCreating = ref(false);
+const appStore = useAppStore(); 
+const isSaving = ref(false);
+const isEditingMode = ref(false);
+const showOnlyFavorites = ref(false);
 
-const newGame = reactive({
-  title: '',
-  boxArtUrl: '',
-  isFavorite: false
+const searchQuery = ref('');
+const currentPage = ref(1);
+const itemsPerPage = 20;
+const gameToDelete = ref(null);
+
+const formGame = reactive({ id: null, title: '', boxArtUrl: '', category: '', year: null, isFavorite: false });
+
+const filteredGames = computed(() => {
+  return appStore.games.filter(g => {
+    const matchSearch = g.title.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                        (g.category && g.category.toLowerCase().includes(searchQuery.value.toLowerCase()));
+    const matchFav = showOnlyFavorites.value ? g.isFavorite : true;
+    return matchSearch && matchFav;
+  });
 });
 
-const fetchGames = async () => {
-  try {
-    const response = await api.get('/Games');
-    games.value = response.data;
-  } catch (error) {
-    if (error.response?.status === 401) router.push('/login');
-  }
-};
+const totalPages = computed(() => Math.ceil(filteredGames.value.length / itemsPerPage) || 1);
+const paginatedGames = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return filteredGames.value.slice(start, start + itemsPerPage);
+});
 
-const createGame = async () => {
-  isCreating.value = true;
-  try {
-    await api.post('/Games', newGame);
-    newGame.title = '';
-    newGame.boxArtUrl = '';
-    newGame.isFavorite = false;
-    await fetchGames();
-  } catch (error) {
-    console.error("Error al crear el juego:", error);
-    alert("No se pudo crear el juego.");
-  } finally {
-    isCreating.value = false;
-  }
-};
+const prevPage = () => { if (currentPage.value > 1) currentPage.value--; };
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
 
-// Función para alternar el estado de favorito
-const toggleFavorite = async (game) => {
-  try {
-    const updatedGame = {
-      id: game.id,
-      title: game.title,
-      boxArtUrl: game.boxArtUrl,
-      isFavorite: !game.isFavorite // Invertimos el valor actual
-    };
+const saveGame = async () => {
+  isSaving.value = true;
+  
+  if (!navigator.onLine) {
+    const pendingGame = { ...formGame, id: `temp-${Date.now()}`, syncStatus: 'pending' };
+    const pendingQueue = await localforage.getItem('pendingGames') || [];
+    pendingQueue.push(pendingGame);
+    await localforage.setItem('pendingGames', pendingQueue);
     
-    // Hacemos el PUT al backend
-    await api.put(`/Games/${game.id}`, updatedGame);
-    
-    // Si la petición es exitosa, actualizamos el estado local en Vue
-    game.isFavorite = updatedGame.isFavorite;
-  } catch (error) {
-    console.error("Error al actualizar favorito:", error);
-    alert("No se pudo actualizar el juego.");
-  }
-};
-
-// Función para eliminar un juego
-const deleteGame = async (id) => {
-  // Pedimos confirmación para evitar borrados accidentales
-  if (!window.confirm("¿Estás seguro de que quieres eliminar este videojuego de tu colección?")) {
+    toast.success('Juego guardado en IndexedDB (Pendiente)');
+    cancelEdit();
+    isSaving.value = false;
+    await appStore.fetchGames(); 
     return;
   }
 
   try {
-    // Hacemos el DELETE al backend
-    await api.delete(`/Games/${id}`);
-    // Recargamos la lista
-    await fetchGames();
+    if (isEditingMode.value) {
+      if (typeof formGame.id === 'string' && formGame.id.startsWith('temp-')) {
+        toast.error('No puedes editar un juego pendiente. Espera a que se sincronice.');
+        isSaving.value = false;
+        return;
+      }
+      await api.put(`/Games/${formGame.id}`, formGame);
+      toast.success('Juego actualizado');
+    } else {
+      const { id, ...dataToSave } = formGame;
+      dataToSave.year = dataToSave.year || 0; 
+      await api.post('/Games', dataToSave);
+      toast.success('Juego creado');
+    }
+    cancelEdit();
+    await appStore.fetchGames(); 
   } catch (error) {
-    console.error("Error al eliminar el juego:", error);
-    alert("No se pudo eliminar el juego.");
+    if (!error.isOffline) toast.error('Error al guardar el juego');
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const loadEditGame = (game) => {
+  isEditingMode.value = true;
+  Object.assign(formGame, { ...game });
+};
+
+const cancelEdit = () => {
+  isEditingMode.value = false;
+  Object.assign(formGame, { id: null, title: '', boxArtUrl: '', category: '', year: null, isFavorite: false });
+};
+
+const toggleFavorite = async (game) => {
+  if (typeof game.id === 'string' && game.id.startsWith('temp-')) {
+    toast.info('Sincroniza el juego primero para marcarlo como favorito');
+    return;
+  }
+  try {
+    game.isFavorite = !game.isFavorite; 
+    await api.put(`/Games/${game.id}`, game);
+    toast.success(game.isFavorite ? 'Añadido a favoritos' : 'Removido de favoritos');
+    await appStore.fetchGames();
+  } catch (error) {
+    if (!error.isOffline) {
+      game.isFavorite = !game.isFavorite; 
+      toast.error('Error al actualizar favorito');
+    }
+  }
+};
+
+const promptDeleteGame = (id) => {
+  gameToDelete.value = id;
+};
+
+const confirmDeleteGame = async () => {
+  const id = gameToDelete.value;
+  if (!id) return;
+
+  if (typeof id === 'string' && id.startsWith('temp-')) {
+    let pendingQueue = await localforage.getItem('pendingGames') || [];
+    pendingQueue = pendingQueue.filter(g => g.id !== id);
+    await localforage.setItem('pendingGames', pendingQueue);
+    toast.success('Juego pendiente eliminado de IndexedDB');
+    gameToDelete.value = null;
+    await appStore.fetchGames();
+    return;
+  }
+  try {
+    await api.delete(`/Games/${id}`);
+    toast.success('Juego eliminado');
+    await appStore.fetchGames();
+  } catch (error) {
+    if (!error.isOffline) toast.error('Error al eliminar');
+  } finally {
+    gameToDelete.value = null;
   }
 };
 
 const handleLogout = async () => {
   try {
     await api.post('/Auth/logout');
-    router.push('/login');
+    window.location.href = '/login';
   } catch (error) {
-    console.error("Error al cerrar sesión", error);
+    window.location.href = '/login';
   }
 };
 
 onMounted(() => {
-  fetchGames();
+  appStore.fetchGames();
 });
 </script>

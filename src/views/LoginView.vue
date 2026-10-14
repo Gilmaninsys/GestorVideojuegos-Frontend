@@ -1,90 +1,99 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50">
-    <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-md space-y-6">
-      <div class="text-center">
-        <h2 class="text-3xl font-bold text-gray-900">Bienvenido</h2>
-        <p class="text-sm text-gray-500 mt-2">Inicia sesión en tu Gestor de Videojuegos</p>
-      </div>
+  <div class="h-screen w-full flex items-center justify-center bg-[#050505] p-4">
+    <Card class="w-full max-w-md bg-[#111] border border-[#333] shadow-[0_0_15px_rgba(0,243,255,0.1)] transition-all duration-300">
+      <CardHeader class="text-center space-y-2">
+        <CardTitle class="text-3xl font-bold text-[#e0e0e0] drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]">
+          {{ isLoginMode ? 'Ciber-Acceso' : 'Nuevo Registro' }}
+        </CardTitle>
+        <p class="text-sm text-gray-500 font-mono">
+          {{ isLoginMode ? 'Identifícate en la red' : 'Crea tus credenciales de acceso' }}
+        </p>
+      </CardHeader>
+      
+      <CardContent>
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div class="space-y-2">
+            <label class="text-xs font-mono text-[#00f3ff]">USUARIO</label>
+            <Input 
+              v-model="form.username" 
+              required 
+              placeholder="Ej. admin"
+              class="bg-[#0a0a0a] border-[#333] text-[#00f3ff] focus-visible:ring-[#00f3ff]"
+            />
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-mono text-[#00f3ff]">CONTRASEÑA</label>
+            <Input 
+              v-model="form.password" 
+              type="password" 
+              required 
+              placeholder="••••••"
+              class="bg-[#0a0a0a] border-[#333] text-[#00f3ff] focus-visible:ring-[#00f3ff]"
+            />
+          </div>
 
-      <!-- El modificador .prevent evita que la página se recargue al enviar el formulario -->
-      <form @submit.prevent="handleLogin" class="space-y-4">
-        <div>
-          <label for="username" class="block text-sm font-medium text-gray-700">Usuario</label>
-          <input
-            id="username"
-            v-model="form.username"
-            type="text"
-            required
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder="Ej. admin"
-          />
-        </div>
+          <Button 
+            type="submit" 
+            :disabled="isLoading"
+            class="w-full bg-transparent border text-bold mt-4 transition-all"
+            :class="isLoginMode ? 'border-[#00f3ff] text-[#00f3ff] hover:bg-[#00f3ff] hover:text-black shadow-[0_0_10px_rgba(0,243,255,0.2)]' : 'border-[#00ff88] text-[#00ff88] hover:bg-[#00ff88] hover:text-black shadow-[0_0_10px_rgba(0,255,136,0.2)]'"
+          >
+            <span v-if="isLoading">Procesando...</span>
+            <span v-else>{{ isLoginMode ? 'ENTRAR' : 'REGISTRARSE' }}</span>
+          </Button>
+        </form>
 
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-          <input
-            id="password"
-            v-model="form.password"
-            type="password"
-            required
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder="••••••"
-          />
-        </div>
-
-        <!-- Mensaje de error dinámico -->
-        <div v-if="errorMessage" class="text-red-500 text-sm text-center font-medium">
-          {{ errorMessage }}
-        </div>
-
-        <button
-          type="submit"
-          :disabled="isLoading"
-          class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
-        >
-          <span v-if="isLoading">Verificando...</span>
-          <span v-else>Iniciar Sesión</span>
-        </button>
-      </form>
-    </div>
+        <!-- Botón Alternador -->
+        <p class="text-xs text-gray-500 font-mono mt-6 text-center">
+          {{ isLoginMode ? '¿No tienes acceso?' : '¿Ya tienes credenciales?' }}
+          <button type="button" @click="toggleMode" class="text-[#00f3ff] hover:underline ml-1">
+            {{ isLoginMode ? 'Crear cuenta' : 'Iniciar sesión' }}
+          </button>
+        </p>
+      </CardContent>
+    </Card>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import api from '../config/axios'; // Nuestro puente seguro
+import { toast } from 'vue-sonner';
+import api from '../config/axios';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const router = useRouter();
-
-// Estado reactivo del formulario
-const form = reactive({
-  username: '',
-  password: ''
-});
-
+const form = reactive({ username: '', password: '' });
 const isLoading = ref(false);
-const errorMessage = ref('');
+const isLoginMode = ref(true);
 
-const handleLogin = async () => {
+const toggleMode = () => {
+  isLoginMode.value = !isLoginMode.value;
+  form.username = '';
+  form.password = '';
+};
+
+const handleSubmit = async () => {
   isLoading.value = true;
-  errorMessage.value = '';
-
   try {
-    // Hacemos la petición POST a tu backend
-    const response = await api.post('/Auth/login', form);
-    
-    // Si llegamos aquí, fue un 200 OK. La cookie ya se guardó sola.
-    console.log(response.data.message);
-    
-    // Redirigimos al usuario a la pantalla principal de juegos
-    router.push('/');
-  } catch (error) {
-    // Capturamos el 401 Unauthorized que configuramos en C#
-    if (error.response && error.response.status === 401) {
-      errorMessage.value = 'Usuario o contraseña incorrectos.';
+    if (isLoginMode.value) {
+      await api.post('/Auth/login', form);
+      toast.success('Acceso concedido');
+      router.push('/games');
     } else {
-      errorMessage.value = 'No se pudo conectar con el servidor.';
+      await api.post('/Auth/register', form);
+      toast.success('Cuenta creada exitosamente. Iniciando sesión...');
+      // Auto-login después de registrarse
+      await api.post('/Auth/login', form);
+      router.push('/games');
+    }
+  } catch (error) {
+    if (isLoginMode.value) {
+      toast.error('Acceso denegado. Verifica tus credenciales.');
+    } else {
+      toast.error(error.response?.data?.message || 'Error al registrar la cuenta.');
     }
   } finally {
     isLoading.value = false;
