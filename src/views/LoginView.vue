@@ -3,7 +3,7 @@
     <Card class="w-full max-w-md bg-[#111] border border-[#333] shadow-[0_0_15px_rgba(0,243,255,0.1)] transition-all duration-300">
       <CardHeader class="text-center space-y-2">
         <CardTitle class="text-3xl font-bold text-[#e0e0e0] drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]">
-          {{ isLoginMode ? 'Ciber-Acceso' : 'Nuevo Registro' }}
+          {{ isLoginMode ? 'Steamer' : 'Nuevo Registro' }}
         </CardTitle>
         <p class="text-sm text-gray-500 font-mono">
           {{ isLoginMode ? 'Identifícate en la red' : 'Crea tus credenciales de acceso' }}

@@ -68,12 +68,17 @@
           </AlertDialogContent>
         </AlertDialog>
 
+        <!-- NUEVO: Botón de Exportar (Ejemplificando requerimiento pendiente) -->
+        <Button @click="exportToImage" variant="outline" class="h-8 text-xs sm:text-sm border-[#00ff88] text-[#00ff88] hover:bg-[#00ff88] hover:text-black">
+          📸 Exportar
+        </Button>
+
         <Button variant="ghost" @click="$router.push('/games')" class="h-8 text-xs sm:text-sm text-[#00f3ff] hover:bg-[#111]">Volver</Button>
       </div>
     </div>
 
-    <!-- Contenedor del Tier List (Hasta C) -->
-    <div class="bg-[#111] rounded shadow-xl border border-[#333] flex-1 flex flex-col overflow-y-auto custom-scrollbar min-h-[40vh]">
+    <!-- Contenedor del Tier List - AÑADIDO: ref="tierListContainer" para tomar la foto -->
+    <div ref="tierListContainer" class="bg-[#111] rounded shadow-xl border border-[#333] flex-1 flex flex-col overflow-y-auto custom-scrollbar min-h-[40vh]">
       <div v-for="tier in tiers" :key="tier.name" class="flex border-b border-[#333] last:border-b-0 min-h-[85px] shrink-0">
         <div :class="[tier.color, 'w-12 sm:w-16 md:w-20 flex items-center justify-center border-r border-[#111] shrink-0']">
           <span class="text-lg sm:text-xl font-black text-black">{{ tier.name }}</span>
@@ -81,7 +86,8 @@
         <draggable v-model="tier.items" group="games" item-key="id" @change="onDragChange($event, tier.name)" class="flex-1 p-2 flex flex-wrap gap-2 bg-[#0a0a0a] overflow-y-auto custom-scrollbar">
           <template #item="{element}">
             <div class="w-12 h-16 md:w-14 md:h-20 relative cursor-grab active:cursor-grabbing hover:scale-110 transition-transform">
-              <img :src="element.boxArtUrl" class="w-full h-full object-cover rounded border border-[#333]" :title="element.title"/>
+              <!-- crossOrigin="anonymous" previene bloqueos de CORS al exportar imágenes externas -->
+              <img :src="element.boxArtUrl" crossorigin="anonymous" class="w-full h-full object-cover rounded border border-[#333]" :title="element.title"/>
             </div>
           </template>
         </draggable>
@@ -116,6 +122,7 @@ import { ref, onMounted, watch } from 'vue';
 import draggable from 'vuedraggable';
 import { toast } from 'vue-sonner';
 import localforage from 'localforage';
+import html2canvas from 'html2canvas-pro'; // Importamos la librería de captura
 import api from '../config/axios';
 import { useAppStore } from '../stores/appStore';
 
@@ -125,6 +132,7 @@ const showHistoryModal = ref(false);
 const tierListName = ref('');
 const isSaving = ref(false);
 const tierToDelete = ref(null);
+const tierListContainer = ref(null); // Referencia al div que queremos exportar
 
 const tiers = ref([
   { name: 'S', color: 'bg-[#ff003c]', items: [] }, 
@@ -134,7 +142,7 @@ const tiers = ref([
 ]);
 const unranked = ref([]);
 
-// ACTUALIZACIÓN REACTIVA: Reemplaza los "temp-ids" por los IDs reales tras la sincronización
+// ACTUALIZACIÓN REACTIVA
 watch(() => appStore.games, (newGames) => {
   unranked.value = unranked.value.map(game => {
     return newGames.find(g => g.title === game.title) || game;
@@ -295,6 +303,36 @@ const confirmDelete = async () => {
     if (!error.isOffline) toast.error('Error al eliminar');
   } finally {
     tierToDelete.value = null;
+  }
+};
+
+// NUEVA FUNCIÓN: Exportar el contenedor de la Tier List a PNG
+const exportToImage = async () => {
+  if (!tierListContainer.value) return;
+  
+  toast.info('Generando imagen...');
+  
+  try {
+    const canvas = await html2canvas(tierListContainer.value, {
+      useCORS: true, // Permite procesar imágenes de servidores externos si tienen cabeceras CORS
+      backgroundColor: '#0a0a0a', // Mantiene el estilo oscuro
+      scale: 2 // Mayor calidad
+    });
+    
+    const imageURL = canvas.toDataURL('image/png');
+    
+    // Crear un enlace virtual para forzar la descarga
+    const link = document.createElement('a');
+    link.href = imageURL;
+    link.download = `TierList_Export_${new Date().getTime()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('¡Imagen descargada!');
+  } catch (error) {
+    console.error("Error al exportar:", error);
+    toast.error('Error al generar la imagen. Verifica las URLs de las portadas.');
   }
 };
 
